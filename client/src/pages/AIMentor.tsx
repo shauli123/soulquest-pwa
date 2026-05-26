@@ -125,6 +125,8 @@ RESPONSE STYLING:
                   frequency: args.frequency || "once",
                   xpReward: args.xpReward,
                   scheduledTime: args.scheduledTime,
+                  targetValue: args.targetValue,
+                  durationMinutes: args.durationMinutes,
                   dueAt: args.scheduledTime ? getNextDueAt(args.scheduledTime) : undefined,
                 },
               });

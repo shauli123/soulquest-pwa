@@ -71,10 +71,12 @@ export const appRouter = router({
                 properties: {
                   title: { type: "string", description: "Quest title in Hebrew" },
                   description: { type: "string", description: "Short description in Hebrew" },
-                  type: { type: "string", enum: ["general", "study", "focus"] },
+                  type: { type: "string", enum: ["general", "study", "focus"], description: "Type of quest. 'study' is for pages/units, 'focus' is for timed sessions." },
                   frequency: { type: "string", enum: ["once", "daily", "weekly"], default: "once" },
                   xpReward: { type: "number", description: "XP reward (10-50)" },
-                  scheduledTime: { type: "string", description: "Time to notify user (HH:mm format)" }
+                  scheduledTime: { type: "string", description: "Time to notify user (HH:mm format)" },
+                  targetValue: { type: "number", description: "Target number of pages/units (only for 'study' type)" },
+                  durationMinutes: { type: "number", description: "Duration in minutes (only for 'focus' type)" }
                 },
                 required: ["title", "description", "type", "xpReward"]
               }
