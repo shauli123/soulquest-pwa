@@ -5,7 +5,8 @@
  * Design: Warm Parchment Dojo 8-bit RPG
  * Main app shell with bottom navigation and page routing
  */
-import { Toaster, toast } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef } from "react";
 import { GameProvider, useGameState, useGameDispatch } from "@/contexts/GameContext";
