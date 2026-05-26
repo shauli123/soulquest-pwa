@@ -1,23 +1,23 @@
 {
   "version": 2,
+  "framework": "vite",
   "functions": {
-    "server/_core/index.ts": {
-      "runtime": "nodejs20.x",
-      "memory": 1024,
-      "maxDuration": 10
+    "server/index.ts": {
+      "runtime": "nodejs20.x"
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/trpc/(.*)",
-      "dest": "server/_core/index.ts"
+      "source": "/api/trpc/:path*",
+      "destination": "/server/index.ts"
     },
     {
-      "handle": "filesystem"
+      "source": "/assets/:path*",
+      "destination": "/client/assets/:path*"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/client/index.html"
     }
   ]
 }
