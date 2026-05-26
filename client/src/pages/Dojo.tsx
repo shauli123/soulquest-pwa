@@ -5,9 +5,9 @@
  */
 import { useState } from "react";
 import { useGameState, useGameDispatch } from "@/contexts/GameContext";
-import { analyzeGratitude } from "@/lib/hackclubAI";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
+import { trpc } from "@/lib/trpc";
 
 type DojoTab = "alchemy" | "skills" | "gratitude" | "coop" | "skins";
 
@@ -229,6 +229,8 @@ function GratitudeTab() {
   const [analysis, setAnalysis] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  const analyzeGratitudeMutation = trpc.mentor.analyzeGratitude.useMutation();
+
   const today = new Date().toISOString().split("T")[0];
   const todayEntry = state.gratitudeEntries.find(e => e.date === today);
 
@@ -241,7 +243,8 @@ function GratitudeTab() {
 
     setIsAnalyzing(true);
     try {
-      const aiAnalysis = await analyzeGratitude(filled);
+      const response = await analyzeGratitudeMutation.mutateAsync({ items: filled });
+      const aiAnalysis = response.analysis;
       setAnalysis(aiAnalysis);
       dispatch({
         type: "ADD_GRATITUDE",

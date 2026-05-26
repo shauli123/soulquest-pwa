@@ -6,8 +6,8 @@
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useGameDispatch } from "@/contexts/GameContext";
-import { generateThoughts } from "@/lib/hackclubAI";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 interface Thought {
   text: string;
@@ -38,6 +38,8 @@ export default function ThoughtSmasher() {
   const touchStartX = useRef<number>(0);
 
   const currentThought = thoughts[currentIndex];
+  const generateThoughtsMutation = trpc.mentor.generateThoughts.useMutation();
+
   const isLastThought = currentIndex >= thoughts.length - 1;
 
   async function startGame() {
@@ -51,12 +53,13 @@ export default function ThoughtSmasher() {
     setLastResult(null);
 
     try {
-      const generatedThoughts = await generateThoughts();
+      const generatedThoughts = await generateThoughtsMutation.mutateAsync();
       // Shuffle
       const shuffled = [...generatedThoughts].sort(() => Math.random() - 0.5);
-      setThoughts(shuffled);
+      setThoughts(shuffled as any);
       setPhase("playing");
     } catch (error) {
+      console.error("Game AI error:", error);
       toast.error("שגיאה בטעינת מחשבות. משתמש בברירת מחדל.");
       setPhase("playing");
     }

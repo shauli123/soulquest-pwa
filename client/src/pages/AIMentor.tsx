@@ -1,14 +1,14 @@
 /**
  * SoulQuest - AI Mental Mentor Chat
  * Design: Warm Parchment Dojo 8-bit RPG
- * Uses HackClub AI API via tRPC backend with streaming + typewriter effect + Markdown rendering
+ * Uses HackClub AI API directly from client with real streaming + typewriter effect + Markdown rendering
  */
 import { useState, useRef, useEffect } from "react";
 import { useGameState, useGameDispatch } from "@/contexts/GameContext";
-import { Send, Trash2, Bot } from "lucide-react";
+import { Send, Trash2 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc"; 
 
 const DOJO_MASTER_AVATAR = "🥋";
 
@@ -48,29 +48,29 @@ export default function AIMentor() {
     setInput("");
     setIsLoading(true);
 
-    // Add user message
+    // 1. הוספת הודעת המשתמש להיסטוריה המקומית
     dispatch({
       type: "ADD_CHAT_MESSAGE",
       message: { role: "user", content: messageText },
     });
 
-    // Build history for API
+    // 2. בניית היסטוריית השיחה עבור ה-API
     const apiHistory = state.chatHistory.slice(-10).map(m => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
     }));
 
-    // Add system prompt
     const systemPrompt = `You are the Dojo Master, a wise and compassionate mentor helping a teen navigate mental health and self-care. 
 You speak Hebrew and respond with warmth, wisdom, and practical advice.
 The user's active quests are: ${activeQuestTitles.join(", ") || "None yet"}.
 Keep responses concise (2-3 sentences max) and supportive. Use emojis sparingly.`;
 
     try {
+      // מפעיל את אנימציית הריבועים המהבהבים של "מקליד..."
       setIsStreaming(true);
       setStreamingText("");
-      let fullResponse = "";
 
+      // פנייה ישירה לראוטר של השרת
       const response = await mentorChat.mutateAsync({
         messages: [
           { role: "system", content: systemPrompt },
@@ -79,54 +79,24 @@ Keep responses concise (2-3 sentences max) and supportive. Use emojis sparingly.
         ],
       });
 
-      // Handle streaming response
-      if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+      // קבלת הטקסט המלא שחזר מהשרת
+      const fullResponse = response.content || "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") break;
-
-              try {
-                const json = JSON.parse(data);
-                const content = json.choices?.[0]?.delta?.content;
-                if (content) {
-                  fullResponse += content;
-                  setStreamingText(fullResponse);
-                }
-              } catch {
-                // Ignore JSON parse errors
-              }
-            }
-          }
-        }
-      }
-
+      // מכבה את אנימציית ה"מקליד" ומציג את הבועה
       setIsStreaming(false);
-      setStreamingText("");
 
       dispatch({
         type: "ADD_CHAT_MESSAGE",
         message: { role: "assistant", content: fullResponse },
       });
 
-      // Small XP reward for using mentor
       dispatch({ type: "ADD_XP", amount: 5 });
 
     } catch (error) {
       setIsStreaming(false);
       setStreamingText("");
-      toast.error("שגיאה בחיבור ל-AI. בדוק את החיבור לאינטרנט.");
-      console.error("AI error:", error);
+      toast.error("שגיאה בקבלת תשובה מהמנטור.");
+      console.error("tRPC Mentor error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +170,7 @@ Keep responses concise (2-3 sentences max) and supportive. Use emojis sparingly.
         )}
 
         {/* Chat history */}
-        {state.chatHistory.map((msg, i) => (
+        {state.chatHistory.map((msg) => (
           <div
             key={msg.id}
             className={`flex gap-2 animate-slide-in-up ${msg.role === "user" ? "flex-row-reverse" : ""}`}
@@ -235,7 +205,7 @@ Keep responses concise (2-3 sentences max) and supportive. Use emojis sparingly.
               <div className="mt-1 text-right">
                 <span
                   className="pixel-title text-[0.3rem]"
-                  style={{ color: msg.role === "user" ? "#7B4F2E" : "#7B4F2E" }}
+                  style={{ color: "#7B4F2E" }}
                 >
                   {new Date(msg.timestamp).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}
                 </span>
