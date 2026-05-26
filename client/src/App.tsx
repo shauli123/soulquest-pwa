@@ -1,40 +1,141 @@
+/**
+ * SoulQuest App
+ * Design: Warm Parchment Dojo 8-bit RPG
+ * Main app shell with bottom navigation and page routing
+ */
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import { useState, useEffect, useRef } from "react";
+import { GameProvider, useGameState, useGameDispatch } from "@/contexts/GameContext";
+import Dashboard from "@/pages/Dashboard";
+import Quests from "@/pages/Quests";
+import AIMentor from "@/pages/AIMentor";
+import ThoughtSmasher from "@/pages/ThoughtSmasher";
+import Dojo from "@/pages/Dojo";
+import Settings from "@/pages/Settings";
+import Onboarding from "@/pages/Onboarding";
+import ComfortMonster from "@/components/ComfortMonster";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
+type Page = "dashboard" | "quests" | "mentor" | "smasher" | "dojo" | "settings";
 
-function Router() {
+const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
+  { id: "dashboard", label: "בית", icon: "🏠" },
+  { id: "quests", label: "קווסטים", icon: "⚔️" },
+  { id: "mentor", label: "מאסטר", icon: "🥋" },
+  { id: "smasher", label: "מנפץ", icon: "🧠" },
+  { id: "dojo", label: "דוג'ו", icon: "🏯" },
+];
+
+function AppShell() {
+  const state = useGameState();
+  const dispatch = useGameDispatch();
+  const [page, setPage] = useState<Page>("dashboard");
+  const monsterChecked = useRef(false);
+
+  // Check for overdue quests and trigger comfort monster
+  useEffect(() => {
+    if (state.comfortMonsterActive || monsterChecked.current) return;
+    const now = Date.now();
+    const overdueQuest = state.quests.find(q => {
+      if (q.status !== "active" || !q.dueAt) return false;
+      return now > q.dueAt + 5 * 60 * 1000; // 5 minutes grace
+    });
+    if (overdueQuest) {
+      monsterChecked.current = true;
+      dispatch({ type: "TRIGGER_COMFORT_MONSTER", questId: overdueQuest.id });
+    }
+  }, [state.quests, state.comfortMonsterActive]);
+
+  if (!state.onboardingComplete) {
+    return <Onboarding />;
+  }
+
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <div
+      className="flex flex-col"
+      style={{
+        height: "100dvh",
+        background: "#FDF6E3",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Comfort Monster overlay */}
+      {state.comfortMonsterActive && (
+        <ComfortMonster questId={state.comfortMonsterQuestId} />
+      )}
+
+      {/* Page content */}
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{ paddingBottom: "0" }}
+      >
+        {page === "dashboard" && <Dashboard />}
+        {page === "quests" && <Quests />}
+        {page === "mentor" && <AIMentor />}
+        {page === "smasher" && <ThoughtSmasher />}
+        {page === "dojo" && <Dojo />}
+        {page === "settings" && <Settings />}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav
+        className="flex"
+        style={{
+          background: "#FDF6E3",
+          borderTop: "3px solid #4A2E1B",
+          boxShadow: "0 -4px 0 #2C1A0E",
+          height: "64px",
+          flexShrink: 0,
+          zIndex: 40,
+        }}
+      >
+        {NAV_ITEMS.map(item => (
+          <button
+            key={item.id}
+            onClick={() => setPage(item.id)}
+            className={`nav-tab ${page === item.id ? "active" : ""}`}
+          >
+            <span className="text-xl leading-none">{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+        {/* Settings button */}
+        <button
+          onClick={() => setPage("settings")}
+          className={`nav-tab ${page === "settings" ? "active" : ""}`}
+        >
+          <span className="text-xl leading-none">⚙️</span>
+          <span>הגדרות</span>
+        </button>
+      </nav>
+    </div>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <GameProvider>
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              style: {
+                background: "#FDF6E3",
+                border: "3px solid #4A2E1B",
+                boxShadow: "4px 4px 0 #4A2E1B",
+                borderRadius: "0",
+                fontFamily: "'Heebo', sans-serif",
+                color: "#2C1A0E",
+                direction: "rtl",
+              },
+            }}
+          />
+          <AppShell />
         </TooltipProvider>
-      </ThemeProvider>
+      </GameProvider>
     </ErrorBoundary>
   );
 }
