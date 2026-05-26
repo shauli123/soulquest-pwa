@@ -3,7 +3,7 @@ import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 
 // Helper to call Ollama Cloud API
-async function callOllamaCloud(messages: any[], model: string = "gemma4:31b-cloud", format?: any) {
+async function callOllamaCloud(messages: any[], model: string = "gemma4:31b-cloud", options: { format?: any, tools?: any[] } = {}) {
   const baseURL = (process.env.OLLAMA_CLOUD_URL || "https://ollama.com").replace(/\/$/, "");
   const apiKey = process.env.OLLAMA_CLOUD_KEY;
 
@@ -21,7 +21,8 @@ async function callOllamaCloud(messages: any[], model: string = "gemma4:31b-clou
       model,
       messages,
       stream: false,
-      format, // For structured output if supported
+      format: options.format,
+      tools: options.tools,
     }),
   });
 
@@ -31,7 +32,10 @@ async function callOllamaCloud(messages: any[], model: string = "gemma4:31b-clou
   }
 
   const data = await response.json();
-  return data.message?.content || "";
+  return {
+    content: data.message?.content || "",
+    tool_calls: data.message?.tool_calls || []
+  };
 }
 
 export const appRouter = router({
@@ -56,9 +60,34 @@ export const appRouter = router({
           throw new Error("Invalid messages structure: received empty array");
         }
 
+        const tools = [
+          {
+            type: "function",
+            function: {
+              name: "add_quest",
+              description: "Add a new mental health or self-care quest for the user in Hebrew.",
+              parameters: {
+                type: "object",
+                properties: {
+                  title: { type: "string", description: "Quest title in Hebrew" },
+                  description: { type: "string", description: "Short description in Hebrew" },
+                  type: { type: "string", enum: ["general", "study", "focus"] },
+                  frequency: { type: "string", enum: ["once", "daily", "weekly"], default: "once" },
+                  xpReward: { type: "number", description: "XP reward (10-50)" },
+                  scheduledTime: { type: "string", description: "Time to notify user (HH:mm format)" }
+                },
+                required: ["title", "description", "type", "xpReward"]
+              }
+            }
+          }
+        ];
+
         try {
-          const content = await callOllamaCloud(messages);
-          return { content };
+          const result = await callOllamaCloud(messages, "gemma4:31b-cloud", { tools });
+          return { 
+            content: result.content,
+            tool_calls: result.tool_calls
+          };
         } catch (error: any) {
           console.error("Mentor Chat Error:", error);
           throw new Error(`AI Mentor Error: ${error?.message || error}`);
@@ -77,11 +106,12 @@ export const appRouter = router({
 המחשבות צריכות להיות ספציפיות לחיי מתבגר (לימודים, חברים, משפחה, ביטחון עצמי).`;
 
         try {
-          const content = await callOllamaCloud([
+          const result = await callOllamaCloud([
             { role: "system", content: "אתה עוזר ליצור תוכן חינוכי לאפליקציית בריאות נפשית לבני נוער. החזר JSON בלבד." },
             { role: "user", content: prompt }
-          ], "gemma4:31b-cloud", "json");
+          ], "gemma4:31b-cloud", { format: "json" });
 
+          const content = result.content;
           // Attempt to parse JSON from the response
           const jsonMatch = content.match(/\[[\s\S]*\]/);
           if (jsonMatch) {
@@ -104,12 +134,12 @@ ${input.items.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 תן ניתוח רגשי חיובי קצר (2-3 משפטים) שמחזק את ההכרה בטוב ומעודד המשך. השתמש בסגנון חם ומעצים.`;
 
         try {
-          const analysis = await callOllamaCloud([
-            { role: "system", content: "אתה מאסטר דוג'ו חכם שמנתח הכרת טוב בעברית. היה קצר, חם ומעצים." },
+          const result = await callOllamaCloud([
+            { role: "system", content: "אתה עוזר ליצור תוכן חינוכי לאפליקציית בריאות נפשית לבני נוער. החזר JSON בלבד." },
             { role: "user", content: prompt }
           ]);
 
-          return { analysis };
+          return { analysis: result.content };
         } catch (error: any) {
           console.error("Analyze Gratitude Error:", error);
           throw new Error("Failed to analyze gratitude");

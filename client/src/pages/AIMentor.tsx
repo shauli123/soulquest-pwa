@@ -61,7 +61,7 @@ export default function AIMentor() {
     }));
 
     const systemPrompt = `You are the Dojo Master, a wise, sharp, and deeply compassionate mentor in a colorful Self-Care RPG Dojo, helping a teenager conquer their challenges. 
-You speak fluent Hebrew and respond with warmth, wisdom, and actionable psychological and spiritual guidance.
+You speak fluent Hebrew and respond with warmth, wisdom, and actionable psychological and spiritual guidance but still talk in a simple easy to understand language.
 
 CRITICAL CORE FRAMEWORK (Integrate these 10 concepts naturally based on context):
 1. הנפש הבהמית מול הנפש האלוקית: View the user's laziness/procrastination as the "Comfort Monster" (נפש בהמית) and call upon their "Inner Hero" (נפש אלוקית).
@@ -97,6 +97,47 @@ RESPONSE STYLING:
 
       // קבלת הטקסט המלא שחזר מהשרת
       const fullResponse = response.content || "";
+
+      // טיפול בקריאות לכלים (Tools)
+      if (response.tool_calls && response.tool_calls.length > 0) {
+        for (const call of response.tool_calls) {
+          if (call.function?.name === "add_quest") {
+            try {
+              const args = typeof call.function.arguments === "string" 
+                ? JSON.parse(call.function.arguments) 
+                : call.function.arguments;
+              
+              const getNextDueAt = (time: string): number => {
+                const [h, m] = time.split(":").map(Number);
+                const now = new Date();
+                const due = new Date();
+                due.setHours(h, m, 0, 0);
+                if (due <= now) due.setDate(due.getDate() + 1);
+                return due.getTime();
+              };
+
+              dispatch({
+                type: "ADD_QUEST",
+                quest: {
+                  title: args.title,
+                  description: args.description,
+                  type: args.type,
+                  frequency: args.frequency || "once",
+                  xpReward: args.xpReward,
+                  scheduledTime: args.scheduledTime,
+                  dueAt: args.scheduledTime ? getNextDueAt(args.scheduledTime) : undefined,
+                },
+              });
+              
+              toast.success(`קווסט חדש נוסף: ${args.title} ⚔️`, {
+                description: "המשך להתאמן ולצבור XP!",
+              });
+            } catch (e) {
+              console.error("Error parsing tool call arguments:", e);
+            }
+          }
+        }
+      }
 
       // מכבה את אנימציית ה"מקליד" ומציג את הבועה
       setIsStreaming(false);
@@ -204,11 +245,12 @@ RESPONSE STYLING:
 
             {/* Message bubble */}
             <div
-              className="flex-1 p-3 max-w-[85%]"
+              className="flex-1 p-3 max-w-[85%] break-words overflow-hidden"
               style={{
                 background: msg.role === "user" ? "#4A2E1B" : "#F4EAD4",
                 border: `3px solid ${msg.role === "user" ? "#2C1A0E" : "#4A2E1B"}`,
                 boxShadow: `3px 3px 0 ${msg.role === "user" ? "#2C1A0E" : "#4A2E1B"}`,
+                wordBreak: "break-word",
               }}
             >
               {msg.role === "user" ? (

@@ -31,6 +31,7 @@ function AppShell() {
   const dispatch = useGameDispatch();
   const [page, setPage] = useState<Page>("dashboard");
   const monsterChecked = useRef(false);
+  const notifiedQuests = useRef<Set<string>>(new Set());
 
   // Check for overdue quests and trigger comfort monster
   useEffect(() => {
@@ -45,6 +46,26 @@ function AppShell() {
       dispatch({ type: "TRIGGER_COMFORT_MONSTER", questId: overdueQuest.id });
     }
   }, [state.quests, state.comfortMonsterActive]);
+
+  // Quest Reminders (Notifications)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      
+      state.quests.forEach(q => {
+        if (q.status === "active" && q.scheduledTime === currentTime && !notifiedQuests.current.has(`${q.id}-${currentTime}`)) {
+          toast.info(`תזכורת קווסט: ${q.title} 🕐`, {
+            description: "הגיע הזמן לבצע את המשימה שלך!",
+            duration: 10000,
+          });
+          notifiedQuests.current.add(`${q.id}-${currentTime}`);
+        }
+      });
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [state.quests]);
 
   if (!state.onboardingComplete) {
     return <Onboarding />;
