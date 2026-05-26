@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#4A2E1B"/>
+  <rect x="8" y="8" width="176" height="176" fill="#FDF6E3" stroke="#4A2E1B" stroke-width="4"/>
+  <rect x="16" y="16" width="160" height="160" fill="#F4EAD4"/>
+  <!-- Sword -->
+  <rect x="88" y="20" width="16" height="100" fill="#4A2E1B"/>
+  <rect x="76" y="80" width="40" height="12" fill="#D4AC0D"/>
+  <rect x="84" y="120" width="24" height="8" fill="#7B4F2E"/>
+  <rect x="88" y="128" width="16" height="20" fill="#7B4F2E"/>
+  <!-- Stars -->
+  <text x="28" y="60" font-size="28" fill="#D4AC0D">⭐</text>
+  <text x="136" y="60" font-size="28" fill="#D4AC0D">⭐</text>
+  <text x="28" y="160" font-size="28" fill="#27AE60">🌿</text>
+  <text x="136" y="160" font-size="28" fill="#27AE60">🌿</text>
+</svg>
