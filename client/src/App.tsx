@@ -18,7 +18,6 @@ import ComfortMonster from "@/components/ComfortMonster";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 type Page = "dashboard" | "quests" | "mentor" | "smasher" | "dojo" | "settings";
-
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "dashboard", label: "בית", icon: "🏠" },
   { id: "quests", label: "קווסטים", icon: "⚔️" },
@@ -51,6 +50,7 @@ function AppShell() {
     return <Onboarding />;
   }
 
+  // make sure to consider if you need authentication for certain routes
   return (
     <div
       className="flex flex-col"

@@ -1,14 +1,14 @@
 /**
  * SoulQuest - AI Mental Mentor Chat
  * Design: Warm Parchment Dojo 8-bit RPG
- * Uses HackClub AI API with streaming + typewriter effect + Markdown rendering
+ * Uses HackClub AI API via tRPC backend with streaming + typewriter effect + Markdown rendering
  */
 import { useState, useRef, useEffect } from "react";
 import { useGameState, useGameDispatch } from "@/contexts/GameContext";
-import { getMentorResponse } from "@/lib/hackclubAI";
 import { Send, Trash2, Bot } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 const DOJO_MASTER_AVATAR = "🥋";
 
@@ -30,6 +30,8 @@ export default function AIMentor() {
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const mentorChat = trpc.mentor.chat.useMutation();
 
   const activeQuestTitles = state.quests
     .filter(q => q.status === "active")
@@ -54,24 +56,60 @@ export default function AIMentor() {
 
     // Build history for API
     const apiHistory = state.chatHistory.slice(-10).map(m => ({
-      role: m.role as "user" | "assistant",
+      role: m.role as "user" | "assistant" | "system",
       content: m.content,
     }));
+
+    // Add system prompt
+    const systemPrompt = `You are the Dojo Master, a wise and compassionate mentor helping a teen navigate mental health and self-care. 
+You speak Hebrew and respond with warmth, wisdom, and practical advice.
+The user's active quests are: ${activeQuestTitles.join(", ") || "None yet"}.
+Keep responses concise (2-3 sentences max) and supportive. Use emojis sparingly.`;
 
     try {
       setIsStreaming(true);
       setStreamingText("");
       let fullResponse = "";
 
-      await getMentorResponse(
-        messageText,
-        apiHistory,
-        activeQuestTitles,
-        (chunk) => {
-          fullResponse += chunk;
-          setStreamingText(fullResponse);
+      const response = await mentorChat.mutateAsync({
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...apiHistory,
+          { role: "user", content: messageText },
+        ],
+      });
+
+      // Handle streaming response
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") break;
+
+              try {
+                const json = JSON.parse(data);
+                const content = json.choices?.[0]?.delta?.content;
+                if (content) {
+                  fullResponse += content;
+                  setStreamingText(fullResponse);
+                }
+              } catch {
+                // Ignore JSON parse errors
+              }
+            }
+          }
         }
-      );
+      }
 
       setIsStreaming(false);
       setStreamingText("");

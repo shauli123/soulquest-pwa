@@ -1,12 +1,12 @@
 /**
  * SoulQuest - HackClub AI Service
- * Uses OpenAI-compatible protocol at https://ai.hackclub.com/v1/chat/completions
- * Model: gpt-4o-mini
+ * Uses OpenAI-compatible protocol at https://ai.hackclub.com/proxy/v1/chat/completions
+ * Model: google/gemini-3.5-flash
  */
 
 const HACKCLUB_API_KEY = "sk-hc-v1-f22b7dd1dd1841069cd86d5b9c5abf92eae6fcb2e07d437f94ead4b53984ab2e";
-const HACKCLUB_API_URL = "https://ai.hackclub.com/v1/chat/completions";
-const MODEL = "gpt-4o-mini";
+const HACKCLUB_API_URL = "https://ai.hackclub.com/proxy/v1/chat/completions";
+const MODEL = "google/gemini-3.5-flash";
 
 export interface AIMessage {
   role: "system" | "user" | "assistant";
