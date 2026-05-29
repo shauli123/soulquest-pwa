@@ -4,6 +4,7 @@
  * Main app shell with bottom navigation and page routing
  */
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef } from "react";
 import { GameProvider, useGameState, useGameDispatch } from "@/contexts/GameContext";
@@ -47,6 +48,15 @@ function AppShell() {
     }
   }, [state.quests, state.comfortMonsterActive]);
 
+  // Request notification permissions on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().catch(console.error);
+      }
+    }
+  }, []);
+
   // Quest Reminders (Notifications)
   useEffect(() => {
     const interval = setInterval(() => {
@@ -55,10 +65,24 @@ function AppShell() {
       
       state.quests.forEach(q => {
         if (q.status === "active" && q.scheduledTime === currentTime && !notifiedQuests.current.has(`${q.id}-${currentTime}`)) {
+          // Show in-app toast
           toast.info(`תזכורת קווסט: ${q.title} 🕐`, {
             description: "הגיע הזמן לבצע את המשימה שלך!",
             duration: 10000,
           });
+
+          // Show browser notification
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification(`סולקווסט: תזכורת לקווסט ⚔️`, {
+                body: `הגיע הזמן: ${q.title}${q.description ? `\n${q.description}` : ""}`,
+                icon: "/favicon.ico"
+              });
+            } catch (err) {
+              console.warn("[Notifications] Failed to trigger browser notification:", err);
+            }
+          }
+
           notifiedQuests.current.add(`${q.id}-${currentTime}`);
         }
       });

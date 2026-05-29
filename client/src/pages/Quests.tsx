@@ -219,6 +219,43 @@ function FocusTimer({ quest, onComplete }: { quest: Quest; onComplete: () => voi
   const [done, setDone] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Load saved timer state on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`soulquest_timer_${quest.id}`);
+    if (saved) {
+      try {
+        const { secondsLeft: savedSeconds, running: savedRunning, lastTimestamp } = JSON.parse(saved);
+        let currentSeconds = savedSeconds;
+        if (savedRunning && lastTimestamp) {
+          const elapsed = Math.floor((Date.now() - lastTimestamp) / 1000);
+          currentSeconds = Math.max(0, savedSeconds - elapsed);
+        }
+        setSecondsLeft(currentSeconds);
+        setRunning(savedRunning && currentSeconds > 0);
+        if (currentSeconds <= 0) {
+          setDone(true);
+        }
+      } catch (e) {
+        console.error("Failed to restore timer:", e);
+      }
+    }
+  }, [quest.id]);
+
+  // Save timer state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(
+      `soulquest_timer_${quest.id}`,
+      JSON.stringify({
+        secondsLeft,
+        running,
+        lastTimestamp: Date.now(),
+      })
+    );
+    if (secondsLeft <= 0) {
+      setDone(true);
+    }
+  }, [secondsLeft, running, quest.id]);
+
   useEffect(() => {
     if (running && secondsLeft > 0) {
       intervalRef.current = setInterval(() => {
@@ -245,6 +282,7 @@ function FocusTimer({ quest, onComplete }: { quest: Quest; onComplete: () => voi
     setSecondsLeft((quest.durationMinutes || 15) * 60);
     setRunning(false);
     setDone(false);
+    localStorage.removeItem(`soulquest_timer_${quest.id}`);
   }
 
   return (
@@ -266,7 +304,10 @@ function FocusTimer({ quest, onComplete }: { quest: Quest; onComplete: () => voi
       {done ? (
         <div className="text-center">
           <div className="pixel-title text-[0.55rem] text-[#27AE60] mb-2">🎉 הצלחת! +{Math.floor((quest.xpReward || 50) * 1.5)} XP BONUS!</div>
-          <button onClick={onComplete} className="pixel-btn w-full">
+          <button onClick={() => {
+            localStorage.removeItem(`soulquest_timer_${quest.id}`);
+            onComplete();
+          }} className="pixel-btn w-full">
             ✅ השלם קווסט
           </button>
         </div>

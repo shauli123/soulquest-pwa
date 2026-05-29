@@ -292,12 +292,54 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, resilience: Math.max(0, Math.min(100, state.resilience + action.delta)) };
 
     case "ADD_QUEST": {
+      let qType = action.quest.type;
+      if (qType !== "general" && qType !== "study" && qType !== "focus") {
+        if (qType === "time" as any || qType === "timer" as any) {
+          qType = "focus";
+        } else if (qType === "pages" as any || qType === "books" as any || qType === "lessons" as any) {
+          qType = "study";
+        } else {
+          qType = "general";
+        }
+      }
+
+      let targetValue = action.quest.targetValue;
+      if (qType === "study") {
+        if (targetValue === undefined || targetValue === null) {
+          targetValue = 3;
+        } else {
+          targetValue = Number(targetValue);
+          if (isNaN(targetValue) || targetValue <= 0) {
+            targetValue = 3;
+          }
+        }
+      } else {
+        targetValue = undefined;
+      }
+
+      let durationMinutes = action.quest.durationMinutes;
+      if (qType === "focus") {
+        if (durationMinutes === undefined || durationMinutes === null) {
+          durationMinutes = 15;
+        } else {
+          durationMinutes = Number(durationMinutes);
+          if (isNaN(durationMinutes) || durationMinutes <= 0) {
+            durationMinutes = 15;
+          }
+        }
+      } else {
+        durationMinutes = undefined;
+      }
+
       const quest: Quest = {
         ...action.quest,
+        type: qType,
+        targetValue,
+        durationMinutes,
         id: nanoid(),
         createdAt: Date.now(),
         status: "active",
-        currentValue: action.quest.type === "study" ? 0 : undefined,
+        currentValue: qType === "study" ? 0 : undefined,
       };
       return { ...state, quests: [quest, ...state.quests] };
     }
@@ -305,7 +347,22 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "UPDATE_QUEST":
       return {
         ...state,
-        quests: state.quests.map(q => q.id === action.id ? { ...q, ...action.updates } : q),
+        quests: state.quests.map(q => {
+          if (q.id === action.id) {
+            const updates = { ...action.updates };
+            if (updates.currentValue !== undefined && updates.currentValue !== null) {
+              updates.currentValue = Number(updates.currentValue);
+            }
+            if (updates.targetValue !== undefined && updates.targetValue !== null) {
+              updates.targetValue = Number(updates.targetValue);
+            }
+            if (updates.durationMinutes !== undefined && updates.durationMinutes !== null) {
+              updates.durationMinutes = Number(updates.durationMinutes);
+            }
+            return { ...q, ...updates };
+          }
+          return q;
+        }),
       };
 
     case "COMPLETE_QUEST": {
